@@ -28,6 +28,13 @@ The server can auto-collect snapshots while running:
 go run ./cmd/app_download_analyzer serve --country kr --chart top-free --db data/appstore.db --interval 6h --auto-fetch --fetch-on-start
 ```
 
+Generate static JSON for charts (GitHub Pages):
+
+```bash
+go run ./cmd/app_download_analyzer report-json --country kr --chart top-free --db data/appstore.db --out report.json
+go run ./cmd/app_download_analyzer timeseries-json --country kr --chart top-free --db data/appstore.db --out timeseries.json
+```
+
 ## GitHub Actions automation
 
 This repo includes a GitHub Actions workflow that collects snapshots on a schedule and stores the SQLite DB as a GitHub Release asset (tag: `appstore-db`).

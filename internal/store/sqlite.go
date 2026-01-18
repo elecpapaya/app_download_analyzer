@@ -239,6 +239,46 @@ func (s *Store) GetSnapshotItems(snapshotID int64) ([]ChartItem, error) {
 	return items, nil
 }
 
+func (s *Store) ListSnapshots(country, chart string) ([]Snapshot, error) {
+	rows, err := s.db.Query(
+		`SELECT id, collected_at, country, chart, limit_n, source_url
+		 FROM snapshots
+		 WHERE country = ? AND chart = ?
+		 ORDER BY collected_at ASC`,
+		country, chart,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var snapshots []Snapshot
+	for rows.Next() {
+		var snapshot Snapshot
+		var collected string
+		if err := rows.Scan(
+			&snapshot.ID,
+			&collected,
+			&snapshot.Country,
+			&snapshot.Chart,
+			&snapshot.Limit,
+			&snapshot.SourceURL,
+		); err != nil {
+			return nil, err
+		}
+		parsed, err := time.Parse(time.RFC3339, collected)
+		if err != nil {
+			return nil, fmt.Errorf("parse collected_at: %w", err)
+		}
+		snapshot.CollectedAt = parsed
+		snapshots = append(snapshots, snapshot)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return snapshots, nil
+}
+
 func scanSnapshot(row *sql.Row) (Snapshot, error) {
 	var snapshot Snapshot
 	var collected string

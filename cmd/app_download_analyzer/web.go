@@ -79,6 +79,24 @@ func runServe(args []string) error {
 		}
 	})
 
+	http.HandleFunc("/api/timeseries", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		payload, err := computeTimeSeries(st, *country, *chart, *themePath, cfg, *limit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(payload); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	})
+
 	if *autoFetch {
 		go func() {
 			doFetch := func() {

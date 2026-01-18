@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"app_download_analyzer/internal/analysis"
 	"app_download_analyzer/internal/store"
@@ -61,12 +60,4 @@ func runReportJSON(args []string) error {
 		return fmt.Errorf("encode report: %w", err)
 	}
 	return nil
-}
-
-func ensureDirForFile(path string) error {
-	dir := filepath.Dir(path)
-	if dir == "." || dir == "" {
-		return nil
-	}
-	return os.MkdirAll(dir, 0o755)
 }

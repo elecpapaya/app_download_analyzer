@@ -114,6 +114,58 @@
         color: #b64035;
       }
 
+      .chart {
+        width: 100%;
+        min-height: 200px;
+      }
+
+      .chart svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .chart-note {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 8px;
+      }
+
+      .empty {
+        color: var(--muted);
+        font-size: 13px;
+        padding: 16px 0;
+      }
+
+      .heatmap-wrap {
+        overflow-x: auto;
+      }
+
+      .heatmap-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        min-width: 540px;
+      }
+
+      .heatmap-table th,
+      .heatmap-table td {
+        padding: 6px 6px;
+        text-align: center;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+
+      .heatmap-table th:first-child,
+      .heatmap-table td:first-child {
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .heatmap-cell {
+        border-radius: 6px;
+      }
+
       .footer {
         padding: 0 24px 24px;
         max-width: 1200px;
@@ -204,6 +256,20 @@
       </div>
     </section>
 
+    <section class="grid">
+      <div class="card">
+        <h2>Rotation Timeline</h2>
+        <div id="rotation-chart" class="chart"></div>
+        <div class="chart-note" id="rotation-note">Waiting for time series data.</div>
+      </div>
+
+      <div class="card">
+        <h2>Theme Heatmap</h2>
+        <div class="heatmap-wrap" id="theme-heatmap"></div>
+        <div class="chart-note">Last 14 snapshots · score range is normalized.</div>
+      </div>
+    </section>
+
     <div class="footer">
       App Store charts are based on Apple RSS. Trend scores combine rank velocity and review growth.
     </div>
@@ -235,6 +301,147 @@
           throw new Error("Report fetch failed");
         }
         return await res.json();
+      };
+
+      const fetchTimeSeries = async () => {
+        const primary = "/api/timeseries";
+        const fallback = "timeseries.json";
+        try {
+          const res = await fetch(primary, { cache: "no-store" });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (err) {
+          // ignore and try fallback
+        }
+        const res = await fetch(fallback, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Time series fetch failed");
+        }
+        return await res.json();
+      };
+
+      const formatShortDate = (value) => {
+        const date = new Date(value);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      };
+
+      const renderRotationChart = (series) => {
+        const target = document.getElementById("rotation-chart");
+        const note = document.getElementById("rotation-note");
+        if (!series || !series.dates || series.dates.length < 2) {
+          target.innerHTML = '<div class="empty">Not enough snapshots yet.</div>';
+          note.textContent = "Need at least 2 snapshots for a trend line.";
+          return;
+        }
+
+        const values = series.rotation_index;
+        const width = 640;
+        const height = 220;
+        const padding = 28;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min || 1;
+        const xStep = (width - padding * 2) / Math.max(1, values.length - 1);
+
+        const points = values.map((value, index) => {
+          const x = padding + index * xStep;
+          const y = padding + (max - value) / range * (height - padding * 2);
+          return { x, y, value };
+        });
+
+        const path = points
+          .map((point, idx) => `${idx === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+          .join(" ");
+
+        const zeroWithin = min <= 0 && max >= 0;
+        const zeroY = zeroWithin ? padding + (max - 0) / range * (height - padding * 2) : null;
+
+        const svg = `
+          <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="lineFade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1f7ea2" stop-opacity="0.35"></stop>
+                <stop offset="100%" stop-color="#1f7ea2" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            ${zeroWithin ? `<line x1="${padding}" x2="${width - padding}" y1="${zeroY}" y2="${zeroY}" stroke="#d5d0c8" stroke-dasharray="4 4"></line>` : ""}
+            <path d="${path}" fill="none" stroke="#1f7ea2" stroke-width="2.5"></path>
+            <path d="${path} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z" fill="url(#lineFade)" opacity="0.7"></path>
+            ${points
+              .map(
+                (point) =>
+                  `<circle cx="${point.x}" cy="${point.y}" r="3.5" fill="#ef6a45" opacity="0.85"></circle>`
+              )
+              .join("")}
+          </svg>
+        `;
+        target.innerHTML = svg;
+
+        const lastIndex = values.length - 1;
+        note.textContent = `Last: ${values[lastIndex].toFixed(2)} · Range ${min.toFixed(2)} to ${max.toFixed(2)} · ${values.length} points`;
+      };
+
+      const renderHeatmap = (series) => {
+        const target = document.getElementById("theme-heatmap");
+        if (!series || !series.dates || series.dates.length === 0) {
+          target.innerHTML = '<div class="empty">No time series available yet.</div>';
+          return;
+        }
+
+        const themeScores = series.theme_scores || {};
+        const themeNames = Object.keys(themeScores);
+        if (themeNames.length === 0) {
+          target.innerHTML = '<div class="empty">No theme scores yet.</div>';
+          return;
+        }
+
+        const limit = 14;
+        const start = Math.max(0, series.dates.length - limit);
+        const dates = series.dates.slice(start);
+
+        const themeStats = themeNames.map((theme) => {
+          const values = (themeScores[theme] || []).slice(start);
+          const avg = values.reduce((sum, value) => sum + Math.abs(value || 0), 0) / Math.max(1, values.length);
+          return { theme, avg };
+        });
+        themeStats.sort((a, b) => b.avg - a.avg);
+        const topThemes = themeStats.slice(0, 8).map((item) => item.theme);
+
+        const clamp = (value, minValue, maxValue) => Math.min(maxValue, Math.max(minValue, value));
+        const colorFor = (value) => {
+          const scaled = clamp(value || 0, -2, 2);
+          const intensity = Math.abs(scaled) / 2;
+          const hue = scaled >= 0 ? 185 : 12;
+          const light = 92 - intensity * 45;
+          return `hsl(${hue}, 70%, ${light}%)`;
+        };
+
+        const header = dates.map((date) => `<th>${formatShortDate(date)}</th>`).join("");
+        const rows = topThemes
+          .map((theme) => {
+            const values = (themeScores[theme] || []).slice(start);
+            const cells = dates
+              .map((_, idx) => {
+                const value = values[idx] || 0;
+                const label = value.toFixed(2);
+                return `<td class="heatmap-cell" style="background:${colorFor(value)}" title="${theme} ${label}">${label}</td>`;
+              })
+              .join("");
+            return `<tr><td>${theme}</td>${cells}</tr>`;
+          })
+          .join("");
+
+        target.innerHTML = `
+          <table class="heatmap-table">
+            <thead>
+              <tr><th>Theme</th>${header}</tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
       };
 
       const loadReport = async () => {
@@ -287,9 +494,26 @@
         }
       };
 
-      document.getElementById("refresh").addEventListener("click", loadReport);
-      loadReport();
-      setInterval(loadReport, 300000);
+      const loadTimeSeries = async () => {
+        try {
+          const series = await fetchTimeSeries();
+          renderRotationChart(series);
+          renderHeatmap(series);
+        } catch (err) {
+          document.getElementById("rotation-chart").innerHTML = '<div class="empty">Time series unavailable.</div>';
+          document.getElementById("rotation-note").textContent = "Waiting for timeseries.json.";
+          document.getElementById("theme-heatmap").innerHTML = '<div class="empty">Time series unavailable.</div>';
+        }
+      };
+
+      const loadAll = async () => {
+        await loadReport();
+        await loadTimeSeries();
+      };
+
+      document.getElementById("refresh").addEventListener("click", loadAll);
+      loadAll();
+      setInterval(loadAll, 300000);
     </script>
   </body>
 </html>

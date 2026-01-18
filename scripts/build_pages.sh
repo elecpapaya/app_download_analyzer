@@ -17,5 +17,12 @@ go run ./cmd/app_download_analyzer report-json \
   --themes "$THEMES" \
   --out "$OUT_DIR/report.json"
 
+go run ./cmd/app_download_analyzer timeseries-json \
+  --country "$COUNTRY" \
+  --chart "$CHART" \
+  --db "$DB_PATH" \
+  --themes "$THEMES" \
+  --out "$OUT_DIR/timeseries.json"
+
 cat <<EOF > "$OUT_DIR/.nojekyll"
 EOF
