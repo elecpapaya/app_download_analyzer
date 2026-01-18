@@ -38,6 +38,10 @@ func main() {
 		if err := runReport(os.Args[2:]); err != nil {
 			log.Fatal(err)
 		}
+	case "report-json":
+		if err := runReportJSON(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
 	case "serve":
 		if err := runServe(os.Args[2:]); err != nil {
 			log.Fatal(err)
@@ -51,6 +55,7 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  app_download_analyzer fetch [--country kr] [--chart top-free] [--limit 25] [--db data/appstore.db] [--no-itunes]")
 	fmt.Println("  app_download_analyzer report [--country kr] [--chart top-free] [--db data/appstore.db] [--top 10] [--themes config/themes.json]")
+	fmt.Println("  app_download_analyzer report-json [--country kr] [--chart top-free] [--db data/appstore.db] [--themes config/themes.json] [--out report.json]")
 	fmt.Println("  app_download_analyzer serve [--country kr] [--chart top-free] [--limit 25] [--db data/appstore.db] [--themes config/themes.json] [--addr :8080]")
 	fmt.Println("    (optional) --auto-fetch --fetch-on-start --interval 6h --no-itunes")
 }

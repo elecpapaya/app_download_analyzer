@@ -219,16 +219,30 @@
         target.innerHTML = rows.join("");
       };
 
+      const fetchReport = async () => {
+        const primary = "/api/report";
+        const fallback = "report.json";
+        try {
+          const res = await fetch(primary, { cache: "no-store" });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (err) {
+          // ignore and try fallback
+        }
+        const res = await fetch(fallback, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Report fetch failed");
+        }
+        return await res.json();
+      };
+
       const loadReport = async () => {
         const status = document.getElementById("status");
         status.textContent = "Loading...";
         status.style.background = "#f1ede7";
         try {
-          const res = await fetch("/api/report");
-          if (!res.ok) {
-            throw new Error("Report fetch failed");
-          }
-          const data = await res.json();
+          const data = await fetchReport();
 
           const latest = new Date(data.latest.collected_at).toLocaleString();
           const previous = new Date(data.previous.collected_at).toLocaleString();
