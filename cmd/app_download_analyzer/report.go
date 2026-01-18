@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"app_download_analyzer/internal/analysis"
@@ -35,21 +34,25 @@ func computeReport(st *store.Store, country, chart, themePath string, cfg analys
 	if err != nil {
 		return reportPayload{}, err
 	}
-	previous, err := st.GetPreviousSnapshot(country, chart, latest.CollectedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return reportPayload{}, fmt.Errorf("need at least two snapshots for report")
-		}
-		return reportPayload{}, err
-	}
 
 	latestItems, err := st.GetSnapshotItems(latest.ID)
 	if err != nil {
 		return reportPayload{}, err
 	}
-	prevItems, err := st.GetSnapshotItems(previous.ID)
+	previous, err := st.GetPreviousSnapshot(country, chart, latest.CollectedAt)
+	var prevItems []store.ChartItem
 	if err != nil {
-		return reportPayload{}, err
+		if errors.Is(err, sql.ErrNoRows) {
+			previous = latest
+			prevItems = latestItems
+		} else {
+			return reportPayload{}, err
+		}
+	} else {
+		prevItems, err = st.GetSnapshotItems(previous.ID)
+		if err != nil {
+			return reportPayload{}, err
+		}
 	}
 
 	themeConfig, err := analysis.LoadThemeConfig(themePath)
