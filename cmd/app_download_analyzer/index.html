@@ -69,6 +69,14 @@
         font-size: 18px;
       }
 
+      .card h3 {
+        margin: 18px 0 8px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
       .stats {
         display: grid;
         gap: 10px;
@@ -166,6 +174,22 @@
         border-radius: 6px;
       }
 
+      .theme-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .split {
+        display: grid;
+        gap: 16px;
+      }
+
+      @media (min-width: 900px) {
+        .split {
+          grid-template-columns: 0.9fr 1.1fr;
+        }
+      }
+
       .footer {
         padding: 0 24px 24px;
         max-width: 1200px;
@@ -209,19 +233,32 @@
         <div style="margin-top: 14px;">
           <button id="refresh">Refresh</button>
         </div>
+        <h3>Rotation Timeline</h3>
+        <div id="rotation-chart" class="chart"></div>
+        <div class="chart-note" id="rotation-note">Waiting for time series data.</div>
       </div>
 
       <div class="card">
         <h2>Theme Momentum</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Theme</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody id="themes"></tbody>
-        </table>
+        <div class="split">
+          <div class="theme-stack">
+            <h3>Ranked Themes</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Theme</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="themes"></tbody>
+            </table>
+          </div>
+          <div class="theme-stack">
+            <h3>Heatmap</h3>
+            <div class="heatmap-wrap" id="theme-heatmap"></div>
+            <div class="chart-note">Last 14 snapshots · score range is normalized.</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -253,20 +290,6 @@
           </thead>
           <tbody id="trending"></tbody>
         </table>
-      </div>
-    </section>
-
-    <section class="grid">
-      <div class="card">
-        <h2>Rotation Timeline</h2>
-        <div id="rotation-chart" class="chart"></div>
-        <div class="chart-note" id="rotation-note">Waiting for time series data.</div>
-      </div>
-
-      <div class="card">
-        <h2>Theme Heatmap</h2>
-        <div class="heatmap-wrap" id="theme-heatmap"></div>
-        <div class="chart-note">Last 14 snapshots · score range is normalized.</div>
       </div>
     </section>
 
