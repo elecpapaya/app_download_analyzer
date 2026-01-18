@@ -1,0 +1,56 @@
+{
+  "rules": [
+    {
+      "theme": "games",
+      "genre_ids": ["6014"],
+      "genres": ["games"]
+    },
+    {
+      "theme": "entertainment",
+      "genre_ids": ["6016", "6011", "6008", "6005"],
+      "genres": ["entertainment", "music", "photo", "social networking"]
+    },
+    {
+      "theme": "commerce",
+      "genre_ids": ["6024", "6023"],
+      "genres": ["shopping", "food", "drink", "food & drink"]
+    },
+    {
+      "theme": "travel",
+      "genre_ids": ["6003", "6010"],
+      "genres": ["travel", "navigation"]
+    },
+    {
+      "theme": "finance",
+      "genre_ids": ["6015"],
+      "genres": ["finance"]
+    },
+    {
+      "theme": "productivity",
+      "genre_ids": ["6007", "6002", "6000"],
+      "genres": ["productivity", "utilities", "business"]
+    },
+    {
+      "theme": "education",
+      "genre_ids": ["6017"],
+      "genres": ["education"]
+    },
+    {
+      "theme": "health",
+      "genre_ids": ["6013", "6018"],
+      "genres": ["health", "fitness", "medical"]
+    },
+    {
+      "theme": "news",
+      "genre_ids": ["6009", "6006", "6001"],
+      "genres": ["news", "reference", "weather"]
+    },
+    {
+      "theme": "sports",
+      "genre_ids": ["6004"],
+      "genres": ["sports"]
+    }
+  ],
+  "risk_on": ["games", "entertainment", "commerce", "travel", "sports"],
+  "risk_off": ["productivity", "education", "health", "finance", "news"]
+}

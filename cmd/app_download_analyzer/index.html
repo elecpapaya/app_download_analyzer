@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>App Store Trend Watch</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap");
+
+      :root {
+        --ink: #111113;
+        --muted: #5c5f66;
+        --accent: #ef6a45;
+        --accent-2: #1f7ea2;
+        --bg: #f7f3ee;
+        --card: #ffffff;
+        --line: #e2dcd4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 20%, #ffe2d6 0%, transparent 50%),
+          radial-gradient(circle at 80% 10%, #d9f0f8 0%, transparent 45%),
+          var(--bg);
+      }
+
+      header {
+        padding: 32px 24px 12px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(28px, 3vw, 36px);
+        letter-spacing: -0.02em;
+      }
+
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+        padding: 12px 24px 40px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      .stats {
+        display: grid;
+        gap: 10px;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 15px;
+      }
+
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #f1ede7;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 8px 4px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .trend-up {
+        color: var(--accent-2);
+      }
+
+      .trend-down {
+        color: #b64035;
+      }
+
+      .footer {
+        padding: 0 24px 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      button {
+        border: none;
+        background: var(--accent);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>App Store Trend Watch</h1>
+      <div class="sub">
+        <span id="snapshot"></span>
+        <span class="pill" id="status">Loading...</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Regime Signals</h2>
+        <div class="stats">
+          <div class="stat"><span>Risk-on score</span><strong id="risk-on">-</strong></div>
+          <div class="stat"><span>Risk-off score</span><strong id="risk-off">-</strong></div>
+          <div class="stat"><span>Rotation index</span><strong id="rotation">-</strong></div>
+        </div>
+        <div style="margin-top: 14px;">
+          <button id="refresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Theme Momentum</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Theme</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="themes"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Most Used (Current Rank)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>App</th>
+              <th>Theme</th>
+            </tr>
+          </thead>
+          <tbody id="current"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Trending Apps</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>App</th>
+              <th>Rank</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="trending"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="footer">
+      App Store charts are based on Apple RSS. Trend scores combine rank velocity and review growth.
+    </div>
+
+    <script>
+      const formatSigned = (value) => {
+        if (value > 0) return "+" + value;
+        return String(value);
+      };
+
+      const renderRows = (targetId, rows) => {
+        const target = document.getElementById(targetId);
+        target.innerHTML = rows.join("");
+      };
+
+      const loadReport = async () => {
+        const status = document.getElementById("status");
+        status.textContent = "Loading...";
+        status.style.background = "#f1ede7";
+        try {
+          const res = await fetch("/api/report");
+          if (!res.ok) {
+            throw new Error("Report fetch failed");
+          }
+          const data = await res.json();
+
+          const latest = new Date(data.latest.collected_at).toLocaleString();
+          const previous = new Date(data.previous.collected_at).toLocaleString();
+          document.getElementById("snapshot").textContent =
+            "Latest: " + latest + " | Previous: " + previous;
+
+          document.getElementById("risk-on").textContent = data.risk_on_score.toFixed(2);
+          document.getElementById("risk-off").textContent = data.risk_off_score.toFixed(2);
+          document.getElementById("rotation").textContent = data.rotation_index.toFixed(2);
+
+          const current = [...data.trends]
+            .sort((a, b) => a.rank - b.rank)
+            .slice(0, 10)
+            .map((item, index) => {
+              const link = item.app_url ? `<a href="${item.app_url}" target="_blank" rel="noopener noreferrer">${item.app_name}</a>` : item.app_name;
+              return `<tr><td>${index + 1}</td><td>${link}</td><td>${item.theme}</td></tr>`;
+            });
+          renderRows("current", current);
+
+          const trending = data.trends.slice(0, 10).map((item, index) => {
+            const deltaClass = item.rank_delta >= 0 ? "trend-up" : "trend-down";
+            const link = item.app_url ? `<a href="${item.app_url}" target="_blank" rel="noopener noreferrer">${item.app_name}</a>` : item.app_name;
+            return `<tr>
+              <td>${index + 1}</td>
+              <td>${link}</td>
+              <td><span class="${deltaClass}">#${item.rank} (${formatSigned(item.rank_delta)})</span></td>
+              <td>${item.trend_score.toFixed(2)}</td>
+            </tr>`;
+          });
+          renderRows("trending", trending);
+
+          const themes = data.theme_scores.map((item) => {
+            return `<tr><td>${item.theme}</td><td>${item.score.toFixed(2)}</td></tr>`;
+          });
+          renderRows("themes", themes);
+
+          status.textContent = "Updated";
+          status.style.background = "#eaf7f0";
+        } catch (err) {
+          status.textContent = "Error";
+          status.style.background = "#ffe2d6";
+        }
+      };
+
+      document.getElementById("refresh").addEventListener("click", loadReport);
+      loadReport();
+      setInterval(loadReport, 300000);
+    </script>
+  </body>
+</html>

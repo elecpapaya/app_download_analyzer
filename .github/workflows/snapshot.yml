@@ -1,0 +1,45 @@
+name: appstore-snapshot
+
+on:
+  schedule:
+    # Default: every 6 hours. Update this cron to change the collection interval.
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "Storefront country code"
+        required: false
+        default: "kr"
+      chart:
+        description: "Chart name (top-free, top-paid)"
+        required: false
+        default: "top-free"
+      limit:
+        description: "Chart size (25 or 50 recommended)"
+        required: false
+        default: "25"
+      no_itunes:
+        description: "Skip iTunes lookup enrichment"
+        required: false
+        default: "false"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Fetch and upload snapshot DB
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COUNTRY: ${{ inputs.country || 'kr' }}
+          CHART: ${{ inputs.chart || 'top-free' }}
+          LIMIT: ${{ inputs.limit || '25' }}
+          NO_ITUNES: ${{ inputs.no_itunes || 'false' }}
+          RELEASE_TAG: appstore-db
+        run: |
+          bash scripts/gha_fetch_release.sh
