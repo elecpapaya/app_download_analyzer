@@ -106,6 +106,8 @@ func computeTimeSeries(st *store.Store, country, chart, themePath string, cfg an
 		snapshotItems = append(snapshotItems, items)
 	}
 
+	snapshots, snapshotItems = groupSnapshotsByDate(snapshots, snapshotItems)
+
 	for idx, snapshot := range snapshots {
 		currentItems := snapshotItems[idx]
 		prevSnapshot := snapshot
@@ -144,6 +146,37 @@ func computeTimeSeries(st *store.Store, country, chart, themePath string, cfg an
 	}
 
 	return payload, nil
+}
+
+func groupSnapshotsByDate(snapshots []store.Snapshot, items [][]store.ChartItem) ([]store.Snapshot, [][]store.ChartItem) {
+	if len(snapshots) == 0 {
+		return snapshots, items
+	}
+	loc, err := time.LoadLocation("Asia/Seoul")
+	if err != nil {
+		loc = time.UTC
+	}
+
+	dateIndex := make(map[string]int, len(snapshots))
+	for i, snapshot := range snapshots {
+		key := snapshot.CollectedAt.In(loc).Format("2006-01-02")
+		dateIndex[key] = i
+	}
+
+	seen := make(map[string]bool, len(dateIndex))
+	groupedSnapshots := make([]store.Snapshot, 0, len(dateIndex))
+	groupedItems := make([][]store.ChartItem, 0, len(dateIndex))
+	for i, snapshot := range snapshots {
+		key := snapshot.CollectedAt.In(loc).Format("2006-01-02")
+		if dateIndex[key] != i || seen[key] {
+			continue
+		}
+		seen[key] = true
+		groupedSnapshots = append(groupedSnapshots, snapshot)
+		groupedItems = append(groupedItems, items[i])
+	}
+
+	return groupedSnapshots, groupedItems
 }
 
 func uniqueThemes(cfg analysis.ThemeConfig) []string {
